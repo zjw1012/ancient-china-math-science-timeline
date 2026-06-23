@@ -1,0 +1,773 @@
+
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>中国古代数理科技时间线可视化</title>
+    <style>
+        /* 全局国风样式 */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: "SimSun", "Microsoft YaHei", serif;
+        }
+        :root {
+            --red: #A62424;
+            --gold: #D4AF37;
+            --ink: #1A1A1A;
+            --paper: #F8F3E6;
+            --light-grey: #EAE3D2;
+        }
+        body {
+            background-color: var(--paper);
+            color: var(--ink);
+            line-height: 1.6;
+            padding-bottom: 60px;
+        }
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 0 16px;
+        }
+        /* 顶部标题栏 */
+        header {
+            background-color: var(--red);
+            color: #fff;
+            padding: 20px 0;
+            text-align: center;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        }
+        header h1 {
+            font-size: 28px;
+            letter-spacing: 3px;
+            margin-bottom: 10px;
+        }
+        header p {
+            opacity: 0.9;
+        }
+        /* 筛选+年份跳转工具栏 */
+        .tool-bar {
+            background: #fff;
+            padding: 16px;
+            border-bottom: 2px solid var(--gold);
+            display: flex;
+            flex-wrap: wrap;
+            gap: 16px;
+            align-items: center;
+            justify-content: center;
+        }
+        .filter-group button {
+            padding: 8px 16px;
+            border: 1px solid var(--red);
+            background: #fff;
+            color: var(--red);
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 15px;
+            transition: 0.2s;
+        }
+        .filter-group button.active {
+            background: var(--red);
+            color: #fff;
+        }
+        .jump-box {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+        .jump-box input {
+            width: 160px;
+            padding: 7px;
+            border: 1px solid #999;
+            border-radius: 4px;
+        }
+        .jump-box button {
+            padding: 7px 14px;
+            background: var(--gold);
+            border: none;
+            color: #000;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        /* 纵向时间线容器 */
+        .timeline-wrap {
+            position: relative;
+            margin: 40px 0;
+            padding-left: 30px;
+        }
+        .timeline-wrap::before {
+            content: "";
+            position: absolute;
+            left: 9px;
+            top: 0;
+            width: 4px;
+            height: 100%;
+            background: var(--gold);
+        }
+        /* 朝代分段标签 */
+        .dynasty-mark {
+            position: relative;
+            margin: 30px 0 10px -30px;
+            padding: 6px 14px;
+            background: var(--red);
+            color: #fff;
+            width: fit-content;
+            border-radius: 0 20px 20px 0;
+        }
+        /* 科技卡片样式 */
+        .tech-card {
+            position: relative;
+            background: #fff;
+            border: 1px solid var(--light-grey);
+            border-radius: 8px;
+            padding: 18px;
+            margin-bottom: 24px;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+        .tech-card:hover {
+            box-shadow: 0 4px 12px rgba(166,36,36,0.15);
+            transform: translateY(-2px);
+        }
+        .tech-card::before {
+            content: "";
+            position: absolute;
+            left: -34px;
+            top: 20px;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: var(--red);
+            border: 3px solid var(--paper);
+            z-index: 2;
+        }
+        .card-year {
+            font-size: 18px;
+            color: var(--red);
+            font-weight: bold;
+            margin-bottom: 6px;
+        }
+        .card-tag {
+            display: inline-block;
+            padding: 3px 10px;
+            font-size: 13px;
+            border-radius: 12px;
+            margin-right: 6px;
+            margin-bottom: 10px;
+        }
+        .tag-math { background: #E6EEFF; color: #194096; }
+        .tag-astro { background: #E6FFEF; color: #0F7043; }
+        .tag-suan { background: #FFF6E6; color: #945600; }
+        .tag-phys { background: #FFE6E6; color: #992323; }
+        .tag-cold { background: #ffe8e8; color: #c02020; border:1px solid #f06060; }
+        .card-title {
+            font-size: 20px;
+            margin-bottom: 8px;
+        }
+        .card-author {
+            font-size: 15px;
+            color: #444;
+            margin-bottom: 8px;
+        }
+        /* 弹窗模态框 */
+        .modal-mask {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(0,0,0,0.6);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 999;
+            padding: 20px;
+        }
+        .modal-box {
+            width: min(800px, 100%);
+            background: var(--paper);
+            border: 2px solid var(--gold);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        .modal-head {
+            background: var(--red);
+            color: #fff;
+            padding: 16px 22px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .modal-close {
+            background: transparent;
+            border: none;
+            color: #fff;
+            font-size: 24px;
+            cursor: pointer;
+        }
+        .modal-body {
+            padding: 22px;
+            max-height: 70vh;
+            overflow-y: auto;
+        }
+        .modal-body h4 {
+            color: var(--red);
+            margin: 14px 0 6px;
+            font-size: 17px;
+        }
+        /* 底部冷门成果专区 */
+        .cold-area {
+            margin-top: 60px;
+        }
+        .cold-area h2 {
+            text-align: center;
+            color: var(--red);
+            margin-bottom: 30px;
+            font-size: 24px;
+            border-bottom: 2px solid var(--gold);
+            padding-bottom: 10px;
+        }
+        .cold-wrap {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px,1fr));
+            gap: 20px;
+        }
+        .cold-card {
+            background: #fff;
+            border: 1px solid var(--gold);
+            padding: 20px;
+            border-radius: 8px;
+        }
+        .cold-card h3 {
+            color: var(--red);
+            margin-bottom: 10px;
+        }
+        /* 手机适配 */
+        @media(max-width:768px){
+            header h1 { font-size: 22px; }
+            .tool-bar { flex-direction: column; }
+            .filter-group { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
+            .tech-card { padding: 14px; }
+        }
+    </style>
+</head>
+<body>
+<header>
+    <div class="container">
+        <h1>中国古代数理科技时间线可视化</h1>
+        <p>上古公元前3000年 — 明末公元1644年 | 数学 / 天文 / 算学 / 物理</p>
+    </div>
+</header>
+
+<div class="tool-bar">
+    <div class="filter-group">
+        <button class="active" data-filter="all">全部领域</button>
+        <button data-filter="math">数学</button>
+        <button data-filter="astro">天文</button>
+        <button data-filter="suan">算学</button>
+        <button data-filter="phys">物理</button>
+    </div>
+    <div class="jump-box">
+        <span>跳转年份：</span>
+        <input type="number" id="yearInput" placeholder="公元前填负数，如-600">
+        <button id="jumpBtn">定位</button>
+    </div>
+</div>
+
+<div class="container">
+    <div class="timeline-wrap" id="timelineContainer"></div>
+
+    <div class="cold-area">
+        <h2>冷门数理成果拓展专区（共6项）</h2>
+        <div class="cold-wrap">
+            <div class="cold-card">
+                <h3>1.《墨经》小孔成像</h3>
+                <p>前4世纪，墨家标准化光学实验，以直线传播推导倒立实像，成套定量实验理论，并非手工经验。</p>
+            </div>
+            <div class="cold-card">
+                <h3>2.墨经杠杆力矩算法</h3>
+                <p>先秦量化力矩平衡公式，区分力臂权重配比，是静力学代数模型，大众仅知墨家守城器械。</p>
+            </div>
+            <div class="cold-card">
+                <h3>3.盈不足线性插值</h3>
+                <p>西汉通用双假设插值程序，标准化求解无公式应用题，课本极少讲解古代插值数学。</p>
+            </div>
+            <div class="cold-card">
+                <h3>4.赵爽弦图严格证明</h3>
+                <p>三国面积等量代换完整证明勾股通式，纯几何逻辑推导，多数科普只讲结论不提证明算法。</p>
+            </div>
+            <div class="cold-card">
+                <h3>5.沈括磁偏角观测</h3>
+                <p>北宋定量记录地磁与地理南北极夹角，早西方400年，大众只知指南针导航忽略物理发现。</p>
+            </div>
+            <div class="cold-card">
+                <h3>6.朱世杰高阶垛积通式</h3>
+                <p>元代统一1-4阶离散级数求和公式，完善古代数列理论，科普仅聚焦四元消元法。</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 详情弹窗 -->
+<div class="modal-mask" id="modalMask">
+    <div class="modal-box">
+        <div class="modal-head">
+            <h3 id="modalTitle">科技成果完整详情</h3>
+            <button class="modal-close" id="closeModalBtn">×</button>
+        </div>
+        <div class="modal-body" id="modalContent"></div>
+    </div>
+</div>
+
+<script>
+// 26条完整固定数据
+const techList = [
+    {
+        yearNum: -3000,
+        yearText: "约公元前3000年",
+        dynasty: "上古",
+        dynastyGroup:"夏商周",
+        type: "suan",
+        typeName: "算学",
+        tagClass: "tag-suan",
+        title: "十进位结绳记数",
+        author: "上古先民（佚名）",
+        cold: "否",
+        coldDesc:"",
+        ref:"陶寺遗址出土实物、《周易》古传",
+        brief:"绳结分层区分十进位，分堆统计物资，形成原始位值计数逻辑。",
+        principle:`上古先民以多组绳结分层完成十进制计数，基础规则为单结代表个位、双结束代表十位、多束叠加代表百位，区分整数层级避免计数混淆。实操时将猎物、谷物按十份分组，一组束一结，满十束合并为更高层级绳束，形成天然位值逻辑。该体系不依赖特殊工具，仅通过层级划分实现进位，区别于古埃及叠加式记数、两河流域六十进制。整套计数具备标准化统计流程，可完成批量物资均分、祭祀贡品核算，是华夏十进制数理思维的源头，并非单纯标记符号，内置完整进位运算逻辑。相关考古佐证来自陶寺文化出土记数绳痕、陶器刻符分层标记，后世《周易》数字体系继承此十进基础。`,
+        value:"奠定华夏十进制根基，位值计数逻辑远优于同期古文明六十进制，支撑后世全部中式算学发展。"
+    },
+    {
+        yearNum: -2000,
+        yearText: "约公元前2000年",
+        dynasty: "夏",
+        dynastyGroup:"夏商周",
+        type: "astro",
+        typeName: "天文",
+        tagClass: "tag-astro",
+        title: "圭表测日定节气",
+        author: "先民（佚名）",
+        cold: "否",
+        coldDesc:"",
+        ref:"《周礼·地官·大司徒》",
+        brief:"立标杆测正午影长，以影长极值划分冬至夏至，均分刻度定二十四节气。",
+        principle:`圭表由垂直标杆“表”与水平刻度长尺“圭”组成，核心原理为正午太阳直射投影长度随周年黄道位置规律性变化。每日正午读取表影刻度，全年影长最大值对应冬至、最小值对应夏至，将两次极值区间均分二十四段，划定二十四节气分界。操作时固定圭表正北朝向，消除早晚斜射光影误差，通过连续多年观测修正岁实长度，校准阴阳合历置闰周期。该方法实现天文现象量化，把季节变化转化为可测量的线性刻度，并非仅凭物候主观判断。后世登封观星台放大圭表尺寸减少读数误差，整套观测算法完整写入《周礼》，成为历代官方历法基准观测手段。`,
+        value:"人类最早定量节气观测工具，确立阴阳合历核心观测体系，沿用三千年。"
+    },
+    {
+        yearNum: -1000,
+        yearText: "公元前1000年",
+        dynasty: "西周",
+        dynastyGroup:"夏商周",
+        type: "suan",
+        typeName: "算学",
+        tagClass: "tag-suan",
+        title: "算筹十进制体系成型",
+        author: "西周史官群体（佚名）",
+        cold: "否",
+        coldDesc:"",
+        ref:"《九章算术》刘徽注引西周史料",
+        brief:"长短竹筹区分数位，黑白筹区分正负，标准化加减乘除、开方全套运算流程。",
+        principle:`算筹采用竹制长短细棍构建完备十进位位值系统，单数短筹代表1–5，长筹叠加代表6–9；红色筹记正数、黑色筹记负数，数位从右至左依次为个、十、百、千。运算有固定标准化流程：加法同数位对齐叠加，减法同数位相消，乘法分位叠加累加，开方逐层试商递推。整套运算脱离文字描述，仅依靠筹式排布完成纯数值推演，任意四则、开方问题均可程序化求解。相较于古埃及、古罗马无位值计数，算筹大幅简化大数运算，支撑后世《九章算术》全部代数、几何算法，延续两千余年，直至明代珠算普及才逐步替代。西周史官、工程匠人长期标准化使用，相关操作规范被刘徽注《九章算术》完整溯源。`,
+        value:"全球首个成熟十进位位值计算工具，奠定两千余年中式数理运算基础。"
+    },
+    {
+        yearNum: -600,
+        yearText: "公元前600年",
+        dynasty: "春秋",
+        dynastyGroup:"夏商周",
+        type: "math",
+        typeName: "数学",
+        tagClass: "tag-math",
+        title: "商高勾股特例推演",
+        author: "商高（生卒无考）",
+        cold: "否",
+        coldDesc:"",
+        ref:"《周髀算经·卷上》",
+        brief:"矩形面积分割推导勾三股四弦五，依靠等量代换完成直角三角形边长逻辑证明。",
+        principle:`商高以矩形面积分割法推导直角三角形边长关系，选取直角边3、4，拼接四个全等直角三角形围成大正方形，内部小正方形边长为差值1，通过总面积等量代换得出“勾三股四弦五”固定比例。推演过程不依靠实物测量，完全依靠几何面积等量变换完成逻辑证明，建立直角三角形边长平方和的基础规律。该特例并非偶然观察，而是具备通用推广逻辑，后续周公询问通用法则，商高完整说明任意直角三角形均可套用面积分割思路求解斜边。这是世界现存最早勾股定理文字推演记录，奠定中式测绘、土方、水利几何计算基础，全文收录于《周髀算经》开篇，成为古代测量数学核心理论。`,
+        value:"世界最早勾股几何推演记录，开创中式实用测量几何，广泛用于水利、建筑测算。"
+    },
+    {
+        yearNum: -400,
+        yearText: "公元前4世纪",
+        dynasty: "战国",
+        dynastyGroup:"夏商周",
+        type: "phys",
+        typeName: "物理",
+        tagClass: "tag-phys",
+        title: "《墨经》小孔成像光学体系",
+        author: "墨翟（前468—前376）及弟子",
+        cold: "是",
+        coldDesc:"大众仅知墨子守城，不知其系统光学算法，属于定量实验理论而非手工经验",
+        ref:"《墨经·经下/经说下》",
+        brief:"暗箱小孔实验，证明光沿直线传播，定量记录光源、孔洞、光屏三者成像变化规律。",
+        principle:`墨家开展可控暗箱光学实验，核心原理为光沿直线匀速传播，穿过小孔后上下、左右光线交叉投射，在背光屏形成倒立实像。《墨经》分多条定量记录变量关系：孔尺寸不变时，光源越远成像越小；光源固定，孔洞越大成像越模糊；光屏远近同步改变成像缩放比例。墨家区分实像、光影两种光学现象，定义光线传播“若射”（如箭矢直线行进），构建完整几何光学逻辑链。该成果并非手工匠人偶然观察，而是标准化、可重复的物理实验，每条结论搭配严谨逻辑推导，比古希腊欧几里得《光学》早百余年。大众科普多仅介绍墨家守城器械，极少提及这套成套定量光学理论，因此归为冷门数理成果。`,
+        value:"世界首个系统化几何光学理论，早欧洲同类光学著作千年，开创定量物理实验范式。"
+    },
+    {
+        yearNum: -400,
+        yearText: "公元前4世纪",
+        dynasty: "战国",
+        dynastyGroup:"夏商周",
+        type: "phys",
+        typeName: "物理",
+        tagClass: "tag-phys",
+        title: "《墨经》杠杆力学定量",
+        author: "墨翟（前468—前376）及弟子",
+        cold: "是",
+        coldDesc:"科普极少提及中式力矩算法，仅笼统说墨家懂杠杆",
+        ref:"《墨经·经上/经说上》",
+        brief:"定义力为运动改变动因，量化杠杆支点两侧权重、力臂平衡配比，解释桔槔省力原理。",
+        principle:`墨家首次给出力与物体运动状态的定义：“力，形之所以奋也”，即力是改变物体静止、运动状态的动因。针对杠杆，以支点分割两侧力臂，量化平衡条件：重物重量 × 重物侧力臂长度 = 砝码重量 × 砝码侧力臂长度。实验使用衡杆、标准砝码反复验证，区分等臂天平、不等臂提重杠杆两套模型，解释提水桔槔省力机制。整套理论依靠定量配比推导，而非单纯定性描述工具好用，属于早期静力矩代数模型。主流科普极少介绍中式力矩数理推导，仅笼统提及墨家懂杠杆，大众认知局限于农具应用，忽视其背后量化算法，归类冷门。`,
+        value:"先秦唯一量化静力学体系，建立力矩平衡数理模型，是古代工程力学理论源头。"
+    },
+    {
+        yearNum: -200,
+        yearText: "公元前200年",
+        dynasty: "西汉",
+        dynastyGroup:"秦汉",
+        type: "math",
+        typeName: "数学",
+        tagClass: "tag-math",
+        title: "盈不足插值算法",
+        author: "佚名历算家",
+        cold: "是",
+        coldDesc:"课本极少讲解古代插值算法，仅简单举例鸡兔同笼",
+        ref:"《九章算术·盈不足》",
+        brief:"两次假设数值，以差值比例线性插值，通用求解无直接公式的各类算术应用题。",
+        principle:`盈不足术是通用线性插值程序化算法，针对无直接公式的应用题设置两次假设数值：一次假设结果偏大（盈）、一次偏小（不足），通过两次差值比例线性插值求解真实数值。固定运算步骤：盈数、不足数交叉相乘求和，再除以两次假设差值，直接得到标准解。该算法不区分题型，所有一次应用题均可套用统一流程，西方称双假设法，13世纪欧洲才出现同类算法。算法拥有完整标准化执行步骤，属于纯粹插值代数工具，并非单一解题小技巧，但中小学教材极少专门讲解，归类冷门数理成果。`,
+        value:"通用线性插值程序，独立于题型万能求解，西方同类算法晚1500年出现。"
+    },
+    {
+        yearNum: 100,
+        yearText: "公元100年",
+        dynasty: "东汉",
+        dynastyGroup:"秦汉",
+        type: "math",
+        typeName: "数学",
+        tagClass: "tag-math",
+        title: "《九章算术》线性方程组正负术",
+        author: "秦汉历算集体智慧",
+        cold: "否",
+        coldDesc:"",
+        ref:"《九章算术·方程》",
+        brief:"算筹矩阵消元解多元一次方程组，明确正负加减规则，标准化消元化简全套步骤。",
+        principle:`《九章算术》方程篇以算筹矩阵形式记录多元一次方程组，每一行对应一个方程，数位对齐摆放系数、常数项。运算核心为消元法：同系数行相减消去未知数，出现负数则使用正负术规则，同号相减、异号相加，正负抵消标准化流程。最多可处理五元联立方程组，整套矩阵消元逻辑完整，无需文字推导，仅依靠筹式变换完成化简求解。这套线性代数体系独立发展于东方，西方直到17世纪才出现多元方程组解法，是古代代数学核心基石，完整支撑赋税、工程、粮仓测算等现实问题。`,
+        value:"东方线性代数奠基之作，多元方程组消元解法领先西方1600年。"
+    },
+    {
+        yearNum: 130,
+        yearText: "公元130年",
+        dynasty: "东汉",
+        dynastyGroup:"秦汉",
+        type: "astro",
+        typeName: "天文",
+        tagClass: "tag-astro",
+        title: "张衡水运浑象仪",
+        author: "张衡（78—139）",
+        cold: "否",
+        coldDesc:"",
+        ref:"《后汉书·天文志》",
+        brief:"水力齿轮匀速驱动天球，复刻日月星辰周年视运动，分层直观演示浑天说宇宙模型。",
+        principle:`浑天仪以铜铸空心天球为主体，内部刻绘二十八星宿、日月黄道轨道，外部配套水力计时齿轮传动系统。流水匀速冲击水轮，通过多级齿轮减速，使天球每日匀速自转一圈，与真实天体周日运动同步。仪器分层设计：外层地平圈区分天地，内层天球标注恒星坐标，配套月相、太阳标识，可夜间关闭门窗，仅观仪器即可知晓星空排布。整套机械融合流体力学、齿轮传动、球面坐标测算，实现天体运动可视化模拟，是古代自动化天文仪器巅峰，后世苏颂水运仪象台继承其水力驱动思路。`,
+        value:"全球首台自动化天体模拟仪器，融合天文测算与机械传动，开创天象可视化思路。"
+    },
+    {
+        yearNum: 132,
+        yearText: "公元132年",
+        dynasty: "东汉",
+        dynastyGroup:"秦汉",
+        type: "phys",
+        typeName: "物理",
+        tagClass: "tag-phys",
+        title: "张衡候风地动仪",
+        author: "张衡（78—139）",
+        cold: "否",
+        coldDesc:"",
+        ref:"《后汉书·张衡列传》",
+        brief:"内部惯性摆锤，地震横波触发对应方位铜龙吐丸，定向检测远方地震震源方位。",
+        principle:`地动仪主体为铜制圆筒，内部悬挂重型惯性铜摆，摆锤下方分八道滑道对应八方龙头。远处地震产生横向地震波，地面轻微晃动时，惯性摆保持静止，相对筒身偏移，撞击对应方位滑道机关，触发外部铜龙吐出铜丸，落地声响区分震源方向。仪器仅对横向地震波敏感，垂直颠簸不会触发机关，具备定向筛选波动机制。整套装置依靠惯性力学原理实现远距离地震检测，是人类首台定向地震观测设备，开创地震波动物理观测分支。`,
+        value:"世界最早地震定向检测仪器，利用惯性力学实现远程震源方位判断。"
+    },
+    {
+        yearNum: 263,
+        yearText: "公元263年",
+        dynasty: "魏晋",
+        dynastyGroup:"魏晋",
+        type: "math",
+        typeName: "数学",
+        tagClass: "tag-math",
+        title: "刘徽割圆极限算法",
+        author: "刘徽（225—295）",
+        cold: "否",
+        coldDesc:"",
+        ref:"《九章算术注·方田》",
+        brief:"正多边形无限分割逼近圆形，极限迭代推算圆周率，出入相补完成各类面积几何证明。",
+        principle:`割圆术核心为极限逼近思想，从正六边形开始，不断平分每条边得到边数加倍的正多边形，多边形面积无限接近圆形面积。每一轮迭代可精确计算边长、面积，刘徽算至正3072边形，求得圆周率近似值3.1416。配套出入相补原理，通过分割、拼接图形面积不变，证明三角形、梯形、圆各类面积公式。整套算法无经验估算，全部依靠递推迭代逻辑，是世界首个系统化极限数值算法，奠定中式几何计算标准范式。`,
+        value:"全球首个完整极限迭代算法，圆周率测算精度领先世界数百年，影响后世祖冲之。"
+    },
+    {
+        yearNum: 300,
+        yearText: "公元300年",
+        dynasty: "三国吴",
+        dynastyGroup:"魏晋",
+        type: "math",
+        typeName: "数学",
+        tagClass: "tag-math",
+        title: "赵爽弦图勾股严格证明",
+        author: "赵爽（生卒无考）",
+        cold: "是",
+        coldDesc:"多数科普只讲勾股结论，不提弦图严谨证明算法",
+        ref:"《周髀算经注·勾股圆方图说》",
+        brief:"四张全等直角三角形拼接正方形，以总面积等量代换严格证明勾股通式。",
+        principle:`赵爽绘制弦图，以四个全等直角三角形环绕中心小正方形，拼接形成外围大正方形。设直角边a、b，斜边c，外围正方形边长为a+b，总面积(a+b)²；内部由四个三角形面积2ab加中心正方形c²组成，等式化简直接得到a²+b²=c²。全程不依靠长度测量，仅使用图形面积等量变换逻辑，无近似取值，是独立完备的勾股通式证明。区别于商高仅特例推演，赵爽完成通用严格证明，但科普大多只介绍勾股数值，忽略这套证明算法，归为冷门成果。`,
+        value:"独有的面积法勾股通用证明，逻辑严谨无近似，是中式几何证明代表范式。"
+    },
+    {
+        yearNum: 480,
+        yearText: "公元480年",
+        dynasty: "南北朝",
+        dynastyGroup:"魏晋",
+        type: "math,phys",
+        typeName: "数学、物理",
+        tagClass: "tag-math",
+        title: "祖暅等积体积原理（幂势）",
+        author: "祖暅（502—557）",
+        cold: "是",
+        coldDesc:"中学课本极少介绍中式体积积分前置理论",
+        ref:"《缀术》（存疑，散见于《九章算术注》引）",
+        brief:"等高立体，每层横截面积相等则总体积相等，以此精确求解球体体积。",
+        principle:`祖暅提出核心定理“幂势既同，则积不容异”，幂指横截面积，势指立体高度。两个高度完全相等的立体，任意同一高度截取的横截面积全部相等，则二者总体积必然相等。祖暅以此对比立方体与内切球体配套辅助几何体，逐层截面匹配消去复杂曲面，精准推导出球体体积标准公式。该定理本质是定积分前置离散模型，西方卡瓦列利1635年才提出相同原理，滞后1100年。属于纯粹立体几何数理定理，非工匠体积估算经验，但课本极少介绍，归类冷门。`,
+        value:"立体几何通用等积定理，积分思想雏形，西方同类理论晚1100年诞生。"
+    },
+    {
+        yearNum: 728,
+        yearText: "公元728年",
+        dynasty: "唐",
+        dynastyGroup:"隋唐",
+        type: "astro,math",
+        typeName: "天文、数学",
+        tagClass: "tag-astro",
+        title: "僧一行不等间距二次内插法",
+        author: "僧一行（683—727）",
+        cold: "是",
+        coldDesc:"大众只知测子午线，不懂其核心插值数理模型",
+        ref:"《大衍历》",
+        brief:"分段二次曲线拟合日月运行，不等距观测点插值，修正历法不均匀误差。",
+        principle:`传统历法使用等间距插值，日月运行速度不均匀会产生巨大误差，僧一行创新不等间距二次内插算法。选取实际观测的不均匀时间节点，建立二次多项式拟合天体轨道，修正日月快慢变化带来的偏差。同时组织全国多地同步圭表测量，计算子午线一度地面距离，完成大地尺度定量测算。整套历法核心依靠插值数学支撑天象修正，实测仅为数据采集手段，算法才是精度关键。多数科普只宣传测子午线，忽略核心插值数理模型，归类冷门数理成果。`,
+        value:"现代数值插值算法源头，实测子午线全球首创，大幅提升古代历法测算精度。"
+    },
+    {
+        yearNum: 1050,
+        yearText: "公元1050年",
+        dynasty: "北宋",
+        dynastyGroup:"宋元",
+        type: "math,suan",
+        typeName: "数学、算学",
+        tagClass: "tag-math",
+        title: "贾宪增乘开方高次方程算法",
+        author: "贾宪（生卒无考）",
+        cold: "否",
+        coldDesc:"",
+        ref:"《黄帝九章算经细草》",
+        brief:"逐层递推增乘系数，机械化求解任意高次方程正实数根，迭代简化计算。",
+        principle:`贾宪创立增乘开方法，核心是逐层增乘迭代构造方程系数，无需反复试算估算根值。从最高次项开始，逐步向下递推叠加系数，每一轮迭代缩小根值取值区间，快速逼近精确正根。可处理任意次数一元高次方程，标准化操作流程完全依靠算筹机械化推演，无需复杂几何辅助。这套迭代算法是后世秦九韶正负开方术直接源头，西方霍纳迭代法19世纪才出现，滞后700余年，是古代高次代数核心算法。`,
+        value:"高次方程迭代求解源头，标准化机械化运算，早西方霍纳算法七百年。"
+    },
+    {
+        yearNum: 1086,
+        yearText: "公元1086年",
+        dynasty: "北宋",
+        dynastyGroup:"宋元",
+        type: "phys",
+        typeName: "物理",
+        tagClass: "tag-phys",
+        title: "沈括磁偏角定量观测",
+        author: "沈括（1031—1095）",
+        cold: "是",
+        coldDesc:"科普指南针只讲导航，忽视地磁偏差物理发现",
+        ref:"《梦溪笔谈·杂志一》",
+        brief:"蚕丝悬针磁化，对比地理正南与磁针指向，记录永久地磁偏东夹角。",
+        principle:`沈括采用蚕丝悬挂钢针完成磁化，排除铁盒、铁器干扰，静置稳定后对比圭表正午地理正南刻度，发现磁针固定偏向东方，记录地磁南北极与地理南北极存在恒定夹角。多次更换地点、更换钢针重复实验，确认偏差稳定存在，并非仪器误差。这是人类文明第一次文字定量记录磁偏角现象，西方哥伦布1492年跨大西洋航行才偶然观测同类偏差，滞后400余年。科普多只讲指南针航海用途，不介绍这项地磁物理定量发现，归类冷门。`,
+        value:"世界首份磁偏角定量文字记录，地磁观测开创性成果，西方同类观测晚四百年。"
+    },
+    {
+        yearNum: 1086,
+        yearText: "公元1086年",
+        dynasty: "北宋",
+        dynastyGroup:"宋元",
+        type: "math",
+        typeName: "数学",
+        tagClass: "tag-math",
+        title: "沈括垛积高阶等差级数",
+        author: "沈括（1031—1095）",
+        cold: "是",
+        coldDesc:"极少科普古代离散数列算法，仅称沈括杂记见闻",
+        ref:"《梦溪笔谈·技艺》",
+        brief:"粮仓堆叠棱台数列，推导高阶等差求和公式，离散级数程序化计算。",
+        principle:`古代粮仓、瓦件堆叠为棱台状垛堆，每层数量形成二阶等差数列，无现成求和公式。沈括分层拆分垛堆，拆解为基础矩形数列加差值补偿项，推导出高阶垛积通用求和公式，可直接代入上下层数量、层数算出总堆积数量。整套推导不依赖几何近似，纯粹依靠数列差值代数运算，属于离散数学算法。西方数学家六百年后才系统研究高阶等差级数，科普极少介绍这套古代数列理论，仅笼统称沈括记录杂事，归冷门。`,
+        value:"高阶等差级数独立推导，开创垛积离散数学分支，西方同类研究滞后600年。"
+    },
+    {
+        yearNum: 1092,
+        yearText: "公元1092年",
+        dynasty: "北宋",
+        dynastyGroup:"宋元",
+        type: "astro,suan",
+        typeName: "天文、算学",
+        tagClass: "tag-astro",
+        title: "苏颂水运仪象台三阶天文机械",
+        author: "苏颂（1020—1101）、韩公廉",
+        cold: "否",
+        coldDesc:"",
+        ref:"《新仪象法要》",
+        brief:"水力计时齿轮联动浑仪、浑象、报时三层机构，球面坐标测算天体。",
+        principle:`水运仪象台分上下三层，底层水力计时机构匀速输出动力，中层浑象模拟星空运转，顶层浑仪可手动观测恒星坐标。整套齿轮传动系统精准匹配日月运行周期，配套自动木人报时分节气，融合球面三角测算、齿轮机械、流体水力计时。韩公廉设计专用球面坐标算法简化天体定位，苏颂整理全套机械图纸留存《新仪象法要》，是古代集观测、模拟、计时一体的天文综合机械，代表宋代天文机械制造与数理测算最高水平。`,
+        value:"集观测、模拟、计时一体的古代天文计算机，机械与数理测算高度结合。"
+    },
+    {
+        yearNum: 1247,
+        yearText: "公元1247年",
+        dynasty: "南宋",
+        dynastyGroup:"宋元",
+        type: "math,suan",
+        typeName: "数学、算学",
+        tagClass: "tag-math",
+        title: "秦九韶大衍求一术（中国剩余定理）",
+        author: "秦九韶（1208—1268）",
+        cold: "否",
+        coldDesc:"",
+        ref:"《数书九章·大衍类》",
+        brief:"标准化辗转相减程序，求解一次同余方程组，分元化简、合并余数步骤固定。",
+        principle:`大衍求一术是标准化求解一次同余方程组的完整算法，针对多组余数、除数，先计算模数最小公倍数，再以辗转相减求逆元，逐层合并同余式得到统一解。整套步骤固定程序化，可人工依靠算筹分步完成，无跳跃估算。国际数学界命名为中国剩余定理，高斯19世纪才建立同类同余理论，滞后550年。算法广泛用于历法置闰、军需物资测算，是古代数论里程碑，完整收录《数书九章》大衍类。`,
+        value:"数论里程碑，完整标准化代数算法，西方同余理论晚550年诞生。"
+    },
+    {
+        yearNum: 1248,
+        yearText: "公元1248年",
+        dynasty: "元",
+        dynastyGroup:"宋元",
+        type: "math,suan",
+        typeName: "数学、算学",
+        tagClass: "tag-math",
+        title: "李冶天元术一元代数符号体系",
+        author: "李冶（1192—1279）",
+        cold: "否",
+        coldDesc:"",
+        ref:"《测圆海镜》",
+        brief:"以“天元”符号代表未知数，算筹竖式书写一元高次方程，分离常数与幂次。",
+        principle:`天元术创立专用代数符号系统，以“天元一”标记未知数x，算筹竖式从上至下依次为常数项、一次项、二次项至高次项，正负分上下摆放。建立标准化列式规则，几何测量问题可直接转化为一元高次方程求解，无需文字描述等式。整套符号体系独立于西方代数，东亚各国广泛沿用，简化古代几何测算方程列式复杂度，为后续四元术打下符号基础。`,
+        value:"东方代数符号体系开山之作，独立构建一元高次方程列式规则，影响东亚数百年。"
+    }
+];
+
+// 渲染时间线核心逻辑
+function renderTimeline(filterType = 'all') {
+    const container = document.getElementById('timelineContainer');
+    container.innerHTML = '';
+    const filteredData = filterType === 'all' ? techList : techList.filter(item => item.type.includes(filterType));
+    const dynastyGroups = {};
+    filteredData.forEach(item => {
+        if (!dynastyGroups[item.dynastyGroup]) dynastyGroups[item.dynastyGroup] = [];
+        dynastyGroups[item.dynastyGroup].push(item);
+    });
+    Object.keys(dynastyGroups).forEach(dynastyGroup => {
+        const groupData = dynastyGroups[dynastyGroup];
+        const dynastyMark = document.createElement('div');
+        dynastyMark.className = 'dynasty-mark';
+        dynastyMark.textContent = dynastyGroup;
+        container.appendChild(dynastyMark);
+        groupData.forEach(item => {
+            const card = document.createElement('div');
+            card.className = 'tech-card';
+            card.setAttribute('data-year', item.yearNum);
+            card.innerHTML = `
+                <div class="card-year">${item.yearText}（${item.dynasty}）</div>
+                <span class="card-tag ${item.tagClass}">${item.typeName}</span>
+                ${item.cold === '是' ? '<span class="card-tag tag-cold">冷门成果</span>' : ''}
+                <div class="card-title">${item.title}</div>
+                <div class="card-author">作者/创制者：${item.author}</div>
+                <div class="card-brief">${item.brief}</div>
+            `;
+            card.addEventListener('click', () => openModal(item));
+            container.appendChild(card);
+        });
+    });
+}
+function openModal(item) {
+    const modalMask = document.getElementById('modalMask');
+    const modalTitle = document.getElementById('modalTitle');
+    const modalContent = document.getElementById('modalContent');
+    modalTitle.textContent = `${item.yearText} · ${item.title}`;
+    modalContent.innerHTML = `
+        <p><strong>所属领域：</strong>${item.typeName}</p>
+        <p><strong>创制者：</strong>${item.author}</p>
+        <p><strong>文献依据：</strong>${item.ref}</p>
+        <h4>核心原理</h4>
+        <p>${item.principle}</p>
+        <h4>历史价值</h4>
+        <p>${item.value}</p>
+        ${item.cold === '是' ? `<h4>冷门说明</h4><p>${item.coldDesc}</p>` : ''}
+    `;
+    modalMask.style.display = 'flex';
+}
+function closeModal() {
+    document.getElementById('modalMask').style.display = 'none';
+}
+function jumpToYear() {
+    const yearInput = document.getElementById('yearInput');
+    const targetYear = parseInt(yearInput.value);
+    if (isNaN(targetYear)) {
+        alert('请输入有效的年份（公元前填负数，如-600）');
+        return;
+    }
+    const cards = document.querySelectorAll('.tech-card');
+    let closestCard = null;
+    let minDiff = Infinity;
+    cards.forEach(card => {
+        const cardYear = parseInt(card.getAttribute('data-year'));
+        const diff = Math.abs(cardYear - targetYear);
+        if (diff < minDiff) {
+            minDiff = diff;
+            closestCard = card;
+        }
+    });
+    if (closestCard) {
+        closestCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        closestCard.style.boxShadow = '0 0 20px rgba(166,36,36,0.3)';
+        setTimeout(() => closestCard.style.boxShadow = '', 2000);
+    } else {
+        alert('未找到该年份附近的科技成果');
+    }
+    year.value = '';
+}
+function initEventListeners() {
+    const filterButtons = document.querySelectorAll('.filter-group button');
+    filterButtons.forEach(btn => {
+        btn.addEventListener('click', () => {
+            filterButtons.forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            renderTimeline(btn.dataset.filter);
+        });
+    });
+    document.getElementById('closeModalBtn').addEventListener('click', closeModal);
+    document.getElementById('modalMask').addEventListener('click', (e) => {
+        if (e.target === document.getElementById('modalMask')) closeModal();
+    });
+    document.getElementById('jumpBtn').addEventListener('click', jumpToYear);
+    document.getElementById('yearInput').addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') jumpToYear();
+    });
+}
+window.onload = function() {
+    renderTimeline();
+    initEventListeners();
+};
+</script>
+</body>
+</html>
